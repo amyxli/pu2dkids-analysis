@@ -1,4 +1,4 @@
-# LAST EDITED 28/4/20
+# LAST EDITED 12/5/20
 # subsets a dataframe that excludes those who did not use colour at above-chance level in the instructed blocks
  
 # load(file="pu2dkids_data.RData") # load the first version of data, with 9 blocks for exp 1 & 2
@@ -80,6 +80,10 @@ adultids_v1 = tapply(DATA$id, list(DATA$taskV, DATA$agegroup), unique)[['V1', 'Y
 nadults_v1 = length(adultids_v1)
 adultids_v4 = tapply(DATA$id, list(DATA$taskV, DATA$agegroup), unique)[['V4', 'YA']]
 nadults_v4 = length(adultids_v4)
+
+# ids of exp 1 and exp 2 participants
+ids_v1 = c(kidids_v1, adultids_v1)
+ids_v4 = c(kidids_v4, adultids_v4)
 
 trialspercond = apply(tapply(DATA$error, list(DATA$id, DATA$block, DATA$cond), length), c(1, 3), mean, na.rm = TRUE)
 
