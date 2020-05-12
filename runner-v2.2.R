@@ -1,6 +1,8 @@
 # LAST EDITED 12/5/20, AXL
 # this is the latest version -- in progress
-# currently checking code (up to line 880)
+# currently checking code 
+## reproducibility check - up to line 880
+## functionality check - up to line 1036
 
 # here, exp 1 and 2 are analysed separately
 
@@ -493,15 +495,6 @@ all.mx <- right_join(all.mx, tmp) # put into data frame that contains all measur
 summary(lm(data=all.mx, color_familiar ~ neutral_incong))
 summary(glm(data=all.mx, SWITCH ~ neutral_incong + cong_incong))
 
-## add Questionnaire data to all.mx
-Qdata$id = as.character(Qdata$id)
-all.mx= right_join(all.mx, Qdata)
-
-## add error data for blocks 2 - 8
-
-tmp = subset(regular.cdf, regular.cdf$COND == 'LEARN') %>% group_by(ID) %>% summarise(mean(E)) %>% rename(id = ID)
-all.mx = right_join(all.mx, tmp) 
-
 
 ## Obtain data from Sdata2 (eprime version)
 
@@ -988,20 +981,53 @@ nadultswitchers_v1 = length(which(ids_v1 %in% names(switchids_v1) & ids_v1 %in% 
 
 switchids = c(switchids_v1, switchids_v4)
 
+################################################################################################################################
+#                                                   build df with measures                                                    ##
+################################################################################################################################
+
+alltaskex_mx <- 
+  right_join(
+    right_join(
+      right_join(
+        rownames_to_column(as.data.frame(allambigcosts)),
+        rownames_to_column(as.data.frame(allcongcosts))
+      ),
+      rownames_to_column(as.data.frame(allpreno))
+    ),
+    rownames_to_column(as.data.frame(allprelate))
+  ) %>%
+  rename("id" = "rowname")
+
 ## -----add switched data to all.mx df
 
-all.mx$switched <- ifelse(all.mx$id %in% names(switchids), 1, 0)
+alltaskex_mx$switched <- ifelse(alltaskex_mx$id %in% names(switchids), 1, 0)
 
-all.mx <- right_join(all.mx, (DATA %>% dplyr::select(c(id, age, agegroup, taskV)) %>% unique())) 
+all.mx <- right_join(alltaskex_mx, (DATA %>% dplyr::select(c(id, age, agegroup, taskV)) %>% unique())) 
 
-all.mx <- all.mx %>% dplyr::select(c(id, age, agegroup, taskV, allambigcosts, allcongcosts, wmscore, stroop_rt_score, stroop_rt_score_interfere, switched))
+tmp <- right_join(
+    rownames_to_column(as.data.frame(stroop_rt_score_interfere)),
+    rownames_to_column(as.data.frame(stroop_rt_score))
+  ) # join stroop variables, 80 obs - 6 missing
+
+# make tmp with id, stroop variables, and wmscore
+tmp <- right_join(tmp, 
+                  rownames_to_column(as.data.frame(wmscore))# 82 obs
+                  ) %>%
+  rename("id" = "rowname") 
+
+# add to all.mx df and reorder variables
+all.mx <- right_join(all.mx, tmp) %>% 
+  dplyr::select(c(id, age, agegroup, taskV, allambigcosts, allcongcosts, wmscore, stroop_rt_score, stroop_rt_score_interfere, switched))
 
 all.mx$switched = as.numeric(all.mx$switched)
-summary(glm(switched ~ agegroup + taskV + "mean(E)" + allambigcosts + allcongcosts + wmscore + stroop_rt_score + stroop_rt_score_interfere, 
-            data=all.mx))
 
-all.mx$`mean(E)`
+## add error data for blocks 2 - 8
+tmp <-  subset(regular.cdf, regular.cdf$COND == 'LEARN') %>% group_by(ID) %>% summarise(mean(E)) %>% rename(id = ID)
+all.mx <-  right_join(all.mx, tmp)
 
+# ## add Questionnaire data to all.mx
+# Qdata$id = as.character(Qdata$id)
+# all.mx= right_join(all.mx, Qdata)
 
 ################################################################################################################################
 #                                       variables in strategy switching                                                       ##
@@ -1210,19 +1236,6 @@ dev.off()
 
 ## CORRELATIONS BETWEEN VARS 
 # task execution
-
-alltaskex_mx <- 
-  right_join(
-    right_join(
-      right_join(
-        rownames_to_column(as.data.frame(allambigcosts)),
-        rownames_to_column(as.data.frame(allcongcosts))
-      ),
-      rownames_to_column(as.data.frame(allpreno))
-    ),
-    rownames_to_column(as.data.frame(allprelate))
-  ) %>%
-  rename("id" = "rowname")
 
 # ambiguous.cdf 
 all.mx <-
