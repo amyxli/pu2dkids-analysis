@@ -7,7 +7,7 @@
 # here, exp 1 and 2 are analysed separately
 
 ## load packages 
-packages = c('car','sfsmisc', 'RColorBrewer', 'gdata', 'beeswarm', 'lme4', 'emmeans', 'pwr', 'tidyverse', 'lmerTest')
+packages = c('car','sfsmisc', 'RColorBrewer', 'gdata', 'beeswarm', 'lme4', 'emmeans', 'pwr', 'tidyverse', 'lmerTest', 'MASS')
 pksload = unlist(lapply(packages, require, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE))
 
 if(sum(pksload) != length(packages)) {
@@ -478,23 +478,12 @@ setdiff(ids, stroopids)
 sum(setdiff(ids, stroopids) %in% adultids)
 sum(setdiff(ids, stroopids) %in% kidids)
 
-stroop_rts = tapply(Sdata$resp.rt, list(Sdata$id, Sdata$congruent, Sdata$resp.corr, is.na(Sdata$trials.thisN)), mean)[,,'1', 'FALSE']*1000 # rts for correct responses only
-stroop_errors = 1 - tapply(Sdata$resp.corr, list(Sdata$id, Sdata$congruent, is.na(Sdata$trials.thisN)), mean, na.rm = TRUE)[,,'FALSE']*100 
+stroop_rts1 = tapply(Sdata$resp.rt, list(Sdata$id, Sdata$congruent, Sdata$resp.corr, is.na(Sdata$trials.thisN)), mean)[,,'1', 'FALSE']*1000 # rts for correct responses only
+stroop_errors1 = 1 - tapply(Sdata$resp.corr, list(Sdata$id, Sdata$congruent, is.na(Sdata$trials.thisN)), mean, na.rm = TRUE)[,,'FALSE']*100 
 
-stroop_rt_score = (stroop_rts[,'neutral'] - stroop_rts[,'cong'])
-stroop_rt_score_interfere = (stroop_rts[,'neutral'] - stroop_rts[,'incong'])
-t.test(stroop_rts[,'cong'], stroop_rts[,'incong'])
-
-## average color use in last two blocks
-tmp = subset(ambiguous.cdf, COND == "LEARN" & BLOCK > 6) %>% group_by(ID, GROUP, EXP, AGE, SWITCH) %>% 
-  summarise(color_familiar = mean(COLOR)/100) %>%
-  rename(id = ID)
-
-all.mx <- right_join(all.mx, tmp) # put into data frame that contains all measures
-
-summary(lm(data=all.mx, color_familiar ~ neutral_incong))
-summary(glm(data=all.mx, SWITCH ~ neutral_incong + cong_incong))
-
+stroop_rt_score1 = (stroop_rts1[,'neutral'] - stroop_rts1[,'cong'])
+stroop_rt_score_interfere1 = (stroop_rts1[,'neutral'] - stroop_rts1[,'incong'])
+t.test(stroop_rts1[,'cong'], stroop_rts1[,'incong'])
 
 ## Obtain data from Sdata2 (eprime version)
 
@@ -536,8 +525,9 @@ stroop_rt_score2 = (stroop_rts2[,'neutral'] - stroop_rts2[,'cong'])
 stroop_rt_score_interfere2 = (stroop_rts2[,'neutral'] - stroop_rts2[,'incong'])
 
 # now combine data from non-eprime and eprime versions 
-stroop_rt_score_interfere = c(stroop_rt_score_interfere, stroop_rt_score_interfere2)
-stroop_rt_score = c(stroop_rt_score,stroop_rt_score2)
+stroop_rt_score_interfere = c(stroop_rt_score_interfere1, stroop_rt_score_interfere2)
+stroop_rt_score = c(stroop_rt_score1,stroop_rt_score2)
+
 
 #plots
 pdf('plots/Stroop_mean.pdf', width = 3, height = 4)
@@ -963,7 +953,7 @@ axis(2, cex = 1.1)
 dev.off()
 
 ################################################################################################################################
-#                                           switch point analysis                                                             ##
+#                                             switched   analysis                                                             ##
 ################################################################################################################################
 
 cthresh = qbinom(0.95, 64, prob = 0.5)/64 
@@ -979,6 +969,18 @@ nswitchers_v1 = length(switchids_v1)
 nkidswitchers_v1 = length(which(ids_v1 %in% names(switchids_v1) & ids_v1 %in% kidids_v1))
 nadultswitchers_v1 = length(which(ids_v1 %in% names(switchids_v1) & ids_v1 %in% adultids_v1))
 
+# exp 2
+
+tmp = tapply(DATA_V4$followed, list(DATA_V4$id, DATA_V4$cond, DATA_V4$block>6 & DATA_V4$block<9, DATA_V4$respkey %in% c(77, 88, 188)), mean, na.rm = TRUE)[,2,'TRUE','TRUE']
+
+switchids_v4 = which(tmp > cthresh)# participants who switched  #
+nswitchids_v4 = which(tmp <= cthresh) # participants who didn't switch
+nswitchers_v4 = length(switchids_v4)
+nkidswitchers_v4 = length(which(ids_v4 %in% names(switchids_v4) & ids_v4 %in% kidids_v4))
+nadultswitchers_v4 = length(which(ids_v4 %in% names(switchids_v4) & ids_v4 %in% adultids_v4))
+
+
+# combine switchids
 switchids = c(switchids_v1, switchids_v4)
 
 ################################################################################################################################
@@ -998,32 +1000,42 @@ alltaskex_mx <-
   ) %>%
   rename("id" = "rowname")
 
-## -----add switched data to all.mx df
+## add switched data to all.mx df
 
 alltaskex_mx$switched <- ifelse(alltaskex_mx$id %in% names(switchids), 1, 0)
 
 all.mx <- right_join(alltaskex_mx, (DATA %>% dplyr::select(c(id, age, agegroup, taskV)) %>% unique())) 
 
+
+## add stroop data
 tmp <- right_join(
     rownames_to_column(as.data.frame(stroop_rt_score_interfere)),
     rownames_to_column(as.data.frame(stroop_rt_score))
   ) # join stroop variables, 80 obs - 6 missing
 
 # make tmp with id, stroop variables, and wmscore
-tmp <- right_join(tmp, 
+tmp <- left_join(tmp, 
                   rownames_to_column(as.data.frame(wmscore))# 82 obs
                   ) %>%
   rename("id" = "rowname") 
 
-# add to all.mx df and reorder variables
-all.mx <- right_join(all.mx, tmp) %>% 
-  dplyr::select(c(id, age, agegroup, taskV, allambigcosts, allcongcosts, wmscore, stroop_rt_score, stroop_rt_score_interfere, switched))
+all.mx <- left_join(all.mx, tmp) %>% # take tmp (which has less obs) and add to all.mx df
+  arrange(id) 
 
 all.mx$switched = as.numeric(all.mx$switched)
 
 ## add error data for blocks 2 - 8
 tmp <-  subset(regular.cdf, regular.cdf$COND == 'LEARN') %>% group_by(ID) %>% summarise(mean(E)) %>% rename(id = ID)
 all.mx <-  right_join(all.mx, tmp)
+
+## add average color use in last two blocks
+tmp <- subset(ambiguous.cdf, COND == "LEARN" & BLOCK > 6) %>% group_by(ID, GROUP, EXP, AGE, SWITCH) %>% 
+  summarise(color_familiar = mean(COLOR)/100) %>%
+  rename(id = ID)
+
+# COMBINE EVERYTHING
+all.mx <- right_join(all.mx, tmp) %>% 
+  dplyr::select(c(id, age, agegroup, taskV, allambigcosts, allcongcosts, wmscore, stroop_rt_score, stroop_rt_score_interfere, switched, color_familiar))
 
 # ## add Questionnaire data to all.mx
 # Qdata$id = as.character(Qdata$id)
@@ -1033,57 +1045,44 @@ all.mx <-  right_join(all.mx, tmp)
 #                                       variables in strategy switching                                                       ##
 ################################################################################################################################
 
+## ------- switching as a binary variable (whether or not colour used by blocks 7-8)
 glm1 <- glm(switched ~ agegroup + taskV + `mean(E)` + allambigcosts + allcongcosts + allpreno + allprelate + wmscore + stroop_rt_score + stroop_rt_score_interfere, 
             data=all.mx)
-
 summary(glm1)
 
 glm2 <- glm(switched ~ agegroup + taskV +  `mean(E)` + allambigcosts + allcongcosts + allpreno + allprelate + wmscore + stroop_rt_score, 
-            data=all.mx)
+            data=all.mx) # model without stroop_score_interfere
 summary(glm2)
 
-anova(glm1, glm2, test="Chisq")
+# model comparison
+anova(glm1, glm2, test="Chisq") # stroop_score_interfere is sig
 
 all.mx$agegroup <- as.factor(all.mx$agegroup)
-tmpmod = glm(switched ~ agegroup + taskV + allambigcosts + allcongcosts + wmscore + stroop_rt_score + stroop_rt_score_interfere, data=all.mx)
-stepAIC(tmpmod, scope=tmpmod, direction="backward")
 
-tmpmod = glm(switched ~ agegroup + taskV + allcongcosts + stroop_rt_score + stroop_rt_score_interfere, data=all.mx)
-stepAIC(tmpmod, scope=tmpmod, direction="backward")
+## stepwise AIC 
 
-stepAIC(glm(switched ~ 1, data=all.mx), scope=tmpmod, direction="forward")
+# omit na's for procedure
+all.mx.no.na <- na.omit(all.mx) 
 
-stepAIC(glm(switched ~ agegroup + stroop_rt_score_interfere, data=all.mx), scope=tmpmod, direction="both")
+# model with all variables including experiment
+tmpmod = glm(switched ~ agegroup + taskV + allambigcosts + allcongcosts + wmscore + stroop_rt_score + stroop_rt_score_interfere, data=all.mx.no.na)
+# backwards
+stepAIC(tmpmod, scope=tmpmod, direction="backward") 
+# forwards
+stepAIC(glm(switched ~ 1, data=all.mx.no.na), scope=tmpmod, direction="forward")
+# both
+stepAIC(glm(switched ~ agegroup + stroop_rt_score_interfere, data=all.mx.no.na), scope=tmpmod, direction="both")
 
-tmpmod = glm(switched ~ agegroup + allambigcosts + allcongcosts + wmscore + stroop_rt_score + stroop_rt_score_interfere, data=all.mx)
-stepAIC(glm(switched ~ agegroup + allambigcosts + allcongcosts + wmscore + stroop_rt_score + stroop_rt_score_interfere, 
-            data = all.mx %>% filter(taskV == "V1")), 
-        scope=tmpmod, direction="backward")
 
-stepAIC(glm(switched ~ agegroup + allambigcosts + allcongcosts + wmscore + stroop_rt_score + stroop_rt_score_interfere, 
-            data = all.mx %>% filter(taskV == "V4")), 
-        scope=tmpmod, direction="backward")
-
-tmpmod = glm(switched ~ agegr2oup + allambigcosts + allcongcosts + wmscore + stroop_rt_score + stroop_rt_score_interfere, data=all.mx)
-
+## ------- switching as a continuous variable (colour use on ambiguous trials in blocks 7-8)
 
 ##########################################################################################
+
 
 switchpoints_v1 = apply(tmp, 1, FUN = function(x) {which.min(x)}) #the switchpoint in miniblocks of each id
 adult_switch_v1 = switchpoints_v1[which(ids_v1 %in% names(switchids_v1) & ids_v1 %in% adultids_v1)] # the switch points for adults who DID switch
 kid_switch_v1 = switchpoints_v1[which(ids_v1 %in% names(switchids_v1) & ids_v1 %in% kidids_v1)] # the switch points for kids who DID switch
 t.test(kid_switch_v1/2, adult_switch_v1/2) 
-
-# exp 2
-
-tmp = tapply(DATA_V4$followed, list(DATA_V4$id, DATA_V4$cond, DATA_V4$block>6 & DATA_V4$block<9, DATA_V4$respkey %in% c(77, 88, 188)), mean, na.rm = TRUE)[,2,'TRUE','TRUE']
-
-switchids_v4 = which(tmp > cthresh)# participants who switched  #
-nswitchids_v4 = which(tmp <= cthresh) # participants who didn't switch
-nswitchers_v4 = length(switchids_v4)
-nkidswitchers_v4 = length(which(ids_v4 %in% names(switchids_v4) & ids_v4 %in% kidids_v4))
-nadultswitchers_v4 = length(which(ids_v4 %in% names(switchids_v4) & ids_v4 %in% adultids_v4))
-
 
 tmp_switch_v4 = tapply(DATA_V4$followed, list(DATA_V4$id, DATA_V4$miniblock, DATA_V4$cond, DATA_V4$respkey %in% c(77, 88, 188)), mean, na.rm = TRUE)[,,2, 'TRUE']
 
@@ -1099,7 +1098,7 @@ kid_switch_v4 = switchpoints_v4[which(ids_v4 %in% names(switchids_v4) & ids_v4 %
 t.test(kid_switch_v4/2, adult_switch_v4/2)
 
 tmp_switch = cbind(tmp_switch_v1, tmp_switch_v4)
-# to do: assign switchpoints by experiment
+
 
 tmp_switch2 = cbind(NA, NA, NA, NA, NA, NA, NA, NA, tmp_switch, NA, NA, NA, NA, NA, NA, NA, NA)
 switchpoints2 = switchpoints + 7
