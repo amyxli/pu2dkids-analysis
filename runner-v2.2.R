@@ -1,8 +1,10 @@
-# LAST EDITED 12/5/20, AXL
+# LAST EDITED 26/5/20, AXL
 # this is the latest version -- in progress
 # currently checking code 
+# added Stroop effect (cong-incong for correct trials)
 ## reproducibility check - up to line 880
 ## functionality check - up to line 1036
+## parts referenced in manuscript have been commented "(manuscript)"
 
 # here, exp 1 and 2 are analysed separately
 
@@ -103,9 +105,12 @@ emmeans(clme, list(pairwise ~ GROUP:EXP), adjust = "tukey")
 clme = lmer(E ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN' & regular.cdf$EXP == 'V1'), control = lcctrl, REML = FALSE)
 Anova(clme)
 
+regular.cdf
 # exp 2
 clme = lmer(E ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN' & regular.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
 Anova(clme)
+
+emmeans(clme, list(pairwise ~ GROUP), adjust = "tukey") 
 
 # comparing exp 1 and 2
 clme = lmer(E ~ BLOCK*GROUP*EXP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN'), control = lcctrl, REML = FALSE)
@@ -122,6 +127,10 @@ emmeans(clme, list(pairwise ~ GROUP:EXP), adjust = "tukey")
 # KIDS,V1 - YA,V4 
 # YA,V1 - KIDS,V4 
 # KIDS,V4 - YA,V4
+
+# exp 2
+clme = lmer(E ~ GROUP + (1|ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN' & regular.cdf$BLOCK > 6 & regular.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
+Anova(clme) # GROUP 
 
 tmp = apply(errors, c(2, 3, 4), mean, na.rm = TRUE) 
 tmp.se = apply(errors, c(2, 3, 4), std.error)
@@ -177,24 +186,15 @@ axis(2, at = seq(0, 50, 10), labels = seq(0, 50, 10), cex = 1.1)
 
 dev.off()
 
-t.test(allerrs[kidids_v1], allerrs[adultids_v1]) 
-t.test(allerrs[kidids_v4], allerrs[adultids_v4]) 
-t.test(allerrs[kidids], allerrs[adultids]) 
-t.test(allerrs[kidids_v1], allerrs[kidids_v4]) 
-t.test(allerrs[adultids_v1], allerrs[adultids_v4]) 
-
 
 t.test(
-  regular.cdf$E[regular.cdf$COND == 'instructed' & regular.cdf$GROUP == 'YA'], 
-  regular.cdf$E[regular.cdf$COND == 'instructed' & regular.cdf$GROUP == 'KIDS']) # ERROR: not enough x observations
+  regular.cdf$E[regular.cdf$COND == 'INSTR' & regular.cdf$GROUP == 'KIDS' & regular.cdf$EXP == 'V1'], 
+  regular.cdf$E[regular.cdf$COND == 'INSTR' & regular.cdf$GROUP == 'YA' & regular.cdf$EXP == 'V1'])
 
+# exp 2 - compare instructed block 9
 t.test(
-  regular.cdf$E[regular.cdf$COND == 'instructed' & regular.cdf$GROUP == 'KIDS' & regular.cdf$EXP == 'V1'], 
-  regular.cdf$E[regular.cdf$COND == 'instructed' & regular.cdf$GROUP == 'KIDS' & regular.cdf$EXP == 'V4'])
-
-t.test(
-  regular.cdf$E[regular.cdf$COND == 'instructed' & regular.cdf$GROUP == 'YA' & regular.cdf$EXP == 'V1'], 
-  regular.cdf$E[regular.cdf$COND == 'instructed' & regular.cdf$GROUP == 'YA' & regular.cdf$EXP == 'V4'])
+  regular.cdf$E[regular.cdf$COND == 'INSTR' & regular.cdf$GROUP == 'KIDS' & regular.cdf$EXP == 'V4'], 
+  regular.cdf$E[regular.cdf$COND == 'INSTR' & regular.cdf$GROUP == 'YA' & regular.cdf$EXP == 'V4'])
 
 ## RTs: to do - put in overleaf
 
@@ -315,7 +315,7 @@ conflicts.cdf$COND[conflicts.cdf$BLOCK < 9] = 'LEARN'
 conflicts.cdf$COND[conflicts.cdf$BLOCK == 9] = 'INSTR'
 conflicts.cdf$COND = as.factor(conflicts.cdf$COND)
 
-# exp 1
+
 
 clme = lmer(PREKEY_late ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(conflicts.cdf, conflicts.cdf$COND == 'LEARN'), control = lcctrl, REML = FALSE)
 summary(clme)
@@ -334,6 +334,22 @@ clme = lmer(CONG_COSTS ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(conflicts.cdf
 Anova(clme) # sig block
 emmeans(clme, list(pairwise ~ GROUP), adjust = "tukey")
 
+## EXP 1 (manuscript) LateGo and NoGo error rates
+clme = lmer(PREKEY_late ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(conflicts.cdf, conflicts.cdf$COND == 'LEARN' & conflicts.cdf$EXP == 'V1'), control = lcctrl, REML = FALSE)
+emmeans(clme, list(pairwise ~ GROUP), adjust = "tukey")
+Anova(clme)
+
+clme = lmer(PREKEY_NoGo ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(conflicts.cdf, conflicts.cdf$COND == 'LEARN' & conflicts.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
+Anova(clme) # sig group
+emmeans(clme, list(pairwise ~ GROUP), adjust = "tukey")
+
+
+## EXP 2 (manuscript) LateGo and NoGo error rates
+clme = lmer(PREKEY_late ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(conflicts.cdf, conflicts.cdf$COND == 'LEARN' & conflicts.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
+Anova(clme)
+emmeans(clme, list(pairwise ~ GROUP), adjust = "tukey")
+
+##### 
 
 pdf('plots/Prelate_mean.pdf', width = 3, height = 4)
 # tiff("Prelate_mean.tiff", units="in", width=4.5, height=4.5, res=300)
@@ -483,7 +499,8 @@ stroop_errors1 = 1 - tapply(Sdata$resp.corr, list(Sdata$id, Sdata$congruent, is.
 
 stroop_rt_score1 = (stroop_rts1[,'neutral'] - stroop_rts1[,'cong'])
 stroop_rt_score_interfere1 = (stroop_rts1[,'neutral'] - stroop_rts1[,'incong'])
-t.test(stroop_rts1[,'cong'], stroop_rts1[,'incong'])
+stroop_effect1 = (stroop_rts1[,'cong'] - stroop_rts1[,'incong']) #stroop effect
+t.test(stroop_rts1[,'cong'], stroop_rts1[,'incong']) # stroop effect
 
 ## Obtain data from Sdata2 (eprime version)
 
@@ -523,11 +540,13 @@ stroop_errors2 = 1 - tapply(Sdata2_df$correct, list(Sdata2_df$id, Sdata2_df$cond
 
 stroop_rt_score2 = (stroop_rts2[,'neutral'] - stroop_rts2[,'cong'])
 stroop_rt_score_interfere2 = (stroop_rts2[,'neutral'] - stroop_rts2[,'incong'])
+stroop_effect2 = (stroop_rts2[,'cong'] - stroop_rts2[,'incong']) #stroop effect
+
 
 # now combine data from non-eprime and eprime versions 
 stroop_rt_score_interfere = c(stroop_rt_score_interfere1, stroop_rt_score_interfere2)
 stroop_rt_score = c(stroop_rt_score1,stroop_rt_score2)
-
+stroop_effect = c(stroop_effect1,stroop_effect2)
 
 #plots
 pdf('plots/Stroop_mean.pdf', width = 3, height = 4)
@@ -623,6 +642,7 @@ mtext(2, text = '% of Ps Reporting Rule Use', line = 2.5, cex = 1.3)
 dev.off()
 
 
+# correct reporting 
 ctab = cbind(Qdata$left.up, Qdata$right.down, Qdata$left.down, Qdata$right.up) - 2
 
 Qdata$correctreport = NA
@@ -668,6 +688,7 @@ ambiguous.cdf$COND[ambiguous.cdf$BLOCK == 9] = 'INSTR'
 ambiguous.cdf$COND = as.factor(ambiguous.cdf$COND)
 ambiguous.cdf$ID = as.character(ambiguous.cdf$ID)
 
+# both exps
 x = tapply(ambiguous.cdf$COLOR, list(ambiguous.cdf$ID, ambiguous.cdf$BLOCK, ambiguous.cdf$GROUP), mean)
 
 xya = apply(x[,7:8, 'YA'], 1, mean, na.rm = TRUE)
@@ -675,7 +696,6 @@ xkids = apply(x[,7:8, 'KIDS'], 1, mean, na.rm = TRUE)
 
 t.test(xya, mu = 50) #sig
 t.test(xkids, mu = 50) #sig
-
 
 x = tapply(ambiguous.cdf$COLOR, list(ambiguous.cdf$ID, ambiguous.cdf$BLOCK, ambiguous.cdf$GROUP, ambiguous.cdf$EXP), mean)
 
@@ -692,8 +712,9 @@ t.test(xkids_v4>75, xya_v4>75, var.equal = TRUE)
 
 # mean 
 t.test(xkids, xya, var.equal = TRUE)
-t.test(xkids_v1, xya_v1, var.equal = TRUE)
-t.test(xkids_v4, xya_v4, var.equal = TRUE)
+## comparison of mean prop color responses in blocks 7 and 8 (manuscript)
+t.test(xkids_v1, xya_v1, var.equal = TRUE) # exp 1
+t.test(xkids_v4, xya_v4, var.equal = TRUE) # exp 2
 
 t.test(xya_v1, mu = 50) #sig
 t.test(xkids_v1, mu = 50) #sig
@@ -718,7 +739,7 @@ ctab_prop = ctab/matrix(c(nkids_v1, nadults_v1), 2, 2, byrow = TRUE)
 ctab_prop
 chisq.test(ctab) 
 
-# exp 2
+# exp 2 (manuscript: issue)
 tmp = tapply(DATA_V4$followed, 
              list(DATA_V4$id, DATA_V4$agegroup, DATA_V4$cond, 
                   DATA_V4$block>6 & DATA_V4$block<9, DATA_V4$respkey %in% c(77, 88, 188)), 
@@ -824,6 +845,7 @@ clme = lmer(COLOR ~ BLOCK*GROUP + (1|ID), data =
             control = lcctrl, REML = FALSE)
 summary(clme)
 Anova(clme) # GROUP is not a significant predictor, in either the Anova() or summary()outputs.
+
 
 # nested comparison: compare this model to one without GROUP as predictor
 clme_nogroup = lmer(COLOR ~ BLOCK + (1|ID), data = 
@@ -1013,6 +1035,8 @@ tmp <- right_join(
     rownames_to_column(as.data.frame(stroop_rt_score))
   ) # join stroop variables, 80 obs - 6 missing
 
+tmp <- left_join(tmp, rownames_to_column(as.data.frame(stroop_effect)))
+
 # make tmp with id, stroop variables, and wmscore
 tmp <- left_join(tmp, 
                   rownames_to_column(as.data.frame(wmscore))# 82 obs
@@ -1035,11 +1059,28 @@ tmp <- subset(ambiguous.cdf, COND == "LEARN" & BLOCK > 6) %>% group_by(ID, GROUP
 
 # COMBINE EVERYTHING
 all.mx <- right_join(all.mx, tmp) %>% 
-  dplyr::select(c(id, age, agegroup, taskV, allambigcosts, allcongcosts, wmscore, stroop_rt_score, stroop_rt_score_interfere, switched, color_familiar))
+  dplyr::select(c(id, age, agegroup, taskV, allambigcosts, allcongcosts, wmscore, stroop_effect, stroop_rt_score, stroop_rt_score_interfere, switched, color_familiar))
 
 # ## add Questionnaire data to all.mx
 # Qdata$id = as.character(Qdata$id)
 # all.mx= right_join(all.mx, Qdata)
+
+## -------- AXL: exp 1 and 2 age group comparison of stroop results
+
+t.test(all.mx$stroop_effect, mu=0) # cong - incong is significant. i.e. longer incongruent RTs
+
+####
+# Exp 1 (manuscript. error here?  not giving same result as Nico)
+tmp <- all.mx %>% dplyr::select(c(id, agegroup, taskV, stroop_effect, stroop_rt_score, stroop_rt_score_interfere)) %>% filter(taskV== "V1")
+t.test(subset(tmp, tmp$agegroup=="KIDS")$stroop_rt_score, subset(tmp, tmp$agegroup=="YA")$stroop_rt_score)
+t.test(subset(tmp, tmp$agegroup=="YA")$stroop_rt_score_interfere, subset(tmp, tmp$agegroup=="KIDS")$stroop_rt_score_interfere)
+
+
+# EXP 2 (manuscript)
+tmp <- all.mx %>% dplyr::select(c(id, agegroup, taskV, stroop_effect, stroop_rt_score, stroop_rt_score_interfere)) %>% filter(taskV== "V4")
+t.test(subset(tmp, tmp$agegroup=="KIDS")$stroop_rt_score, subset(tmp, tmp$agegroup=="YA")$stroop_rt_score)
+t.test(subset(tmp, tmp$agegroup=="YA")$stroop_rt_score_interfere, subset(tmp, tmp$agegroup=="KIDS")$stroop_rt_score_interfere)
+
 
 ################################################################################################################################
 #                                       variables in strategy switching                                                       ##
@@ -1069,20 +1110,35 @@ tmpmod = glm(switched ~ agegroup + taskV + allambigcosts + allcongcosts + wmscor
 # backwards
 stepAIC(tmpmod, scope=tmpmod, direction="backward") 
 # forwards
-stepAIC(glm(switched ~ 1, data=all.mx.no.na), scope=tmpmod, direction="forward")
+stepAIC(glm(switched ~ 1, data=all.mx.no.na), scope=tmpmod, direction="forward") 
 # both
 stepAIC(glm(switched ~ agegroup + stroop_rt_score_interfere, data=all.mx.no.na), scope=tmpmod, direction="both")
 
+# both directions and backwards give same results
 
 ## ------- switching as a continuous variable (colour use on ambiguous trials in blocks 7-8)
-
+# (manuscript issue)
 ##########################################################################################
+tmp_switch = tapply(DATA_V1$followed, list(DATA_V1$id, DATA_V1$miniblock, DATA_V1$cond, DATA_V1$respkey %in% c(77, 88, 188)), mean, na.rm = TRUE)[,,2, 'TRUE']
 
+tmp_switch = tmp_switch[,1:16]
+
+miniblock_diff = tmp_switch - matrix(rowMeans(tmp_switch, na.rm = TRUE), ncol = 16, nrow = nids_v1)
+CUsum = apply(miniblock_diff, 1, FUN = function(x) cumsum(x))
+tmp=t(CUsum)
+
+## CLARIFY ABOVE
+# matrix(rowMeans(tmp_switch, na.rm = TRUE), ncol = 16, nrow = nids) gives mean followed prop for each of the 90 participants across 16 miniblocks
+# tmp_switch minus the above : compares the mean for participant's followed prop in a miniblock to participant's overall performance
+# M_miniblock - M_overall for each miniblock; 90 participants x 16 miniblocks matrix
+# apply (above, 1 ,FUN = function(x) cumsum(x)) ; cumulatively summing the above for each miniblock
 
 switchpoints_v1 = apply(tmp, 1, FUN = function(x) {which.min(x)}) #the switchpoint in miniblocks of each id
 adult_switch_v1 = switchpoints_v1[which(ids_v1 %in% names(switchids_v1) & ids_v1 %in% adultids_v1)] # the switch points for adults who DID switch
 kid_switch_v1 = switchpoints_v1[which(ids_v1 %in% names(switchids_v1) & ids_v1 %in% kidids_v1)] # the switch points for kids who DID switch
 t.test(kid_switch_v1/2, adult_switch_v1/2) 
+
+######
 
 tmp_switch_v4 = tapply(DATA_V4$followed, list(DATA_V4$id, DATA_V4$miniblock, DATA_V4$cond, DATA_V4$respkey %in% c(77, 88, 188)), mean, na.rm = TRUE)[,,2, 'TRUE']
 
