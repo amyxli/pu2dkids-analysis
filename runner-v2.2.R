@@ -595,7 +595,7 @@ axis(2, at = seq(-100, 150, 50), labels = seq(-100, 150, 50), cex = 1.1)
 abline(h = 0)
 dev.off()
 
-####### MAAATE -------
+####### -------
 scores.cdf = data.frame(
   ID = names(allerrs), 
   WM = NA, 
