@@ -1,9 +1,8 @@
-# LAST EDITED 26/5/20, AXL
+# LAST EDITED 19/6/20, AXL
 # this is the latest version -- in progress
 # currently checking code 
 # added Stroop effect (cong-incong for correct trials)
-## reproducibility check - up to line 880
-## functionality check - up to line 1036
+
 ## parts referenced in manuscript have been commented "(manuscript)"
 
 # here, exp 1 and 2 are analysed separately
@@ -36,6 +35,10 @@ colorset = rbind(brewer.pal(6, 'Blues')[c(3,6)], brewer.pal(6, 'Reds')[c(3, 6)])
 
 # prep data 
 source('prep_data-v2.R')
+
+# dfs for exp 1 and 2, overwrite pre-exclusion dfs
+DATA_V1 <- DATA %>% filter(taskV == 'V1')
+DATA_V4 <- DATA %>% filter(taskV == 'V4')
 
 ####### overview of number of subjects in different experiments 
 
@@ -89,9 +92,9 @@ regular.cdf$COND[regular.cdf$BLOCK == 1] = 'RAND'
 regular.cdf$COND = as.factor(regular.cdf$COND)
 
 
-######################## OVERALL ERRORS ####################
+######################## OVERALL ERRORS ---- ####################
 
-clme = lmer(E ~ BLOCK*GROUP*EXP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN'), control = lcctrl, REML = FALSE)
+clme = lmer(E ~ BLOCK*GROUP*EXP + (1+BLOCK|ID), data = regular.cdf, control = lcctrl, REML = FALSE)
 # error as response variable
 # random slopes and intercepts
 # the term (1+BLOCK|ID) generates a vector-valued random effect (intercept and slope) for each of the n levels of the subject factor
@@ -101,39 +104,47 @@ Anova(clme)
 # BLOCK, GROUP SIG
 emmeans(clme, list(pairwise ~ GROUP:EXP), adjust = "tukey")
 
-# exp 1
-clme = lmer(E ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN' & regular.cdf$EXP == 'V1'), control = lcctrl, REML = FALSE)
+# exp 1 (manuscript)
+clme = lmer(E ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$EXP == 'V1'), control = lcctrl, REML = FALSE)
 Anova(clme)
 
-regular.cdf
-# exp 2
-clme = lmer(E ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN' & regular.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
+# exp 2 (manuscript)
+clme = lmer(E ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
 Anova(clme)
 
 emmeans(clme, list(pairwise ~ GROUP), adjust = "tukey") 
 
 # comparing exp 1 and 2
-clme = lmer(E ~ BLOCK*GROUP*EXP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN'), control = lcctrl, REML = FALSE)
+clme = lmer(E ~ BLOCK*GROUP*EXP + (1+BLOCK|ID), data = regular.cdf, control = lcctrl, REML = FALSE)
 summary(clme)
 
-###########  ERRORS IN BLOCKS 7 and 8
+###########  ERRORS IN BLOCKS 7 and 8 ----
 
 clme = lmer(E ~ GROUP*EXP + (1|EXP), data = subset(regular.cdf, regular.cdf$COND == 'LEARN' & regular.cdf$BLOCK > 6), control = lcctrl, REML = FALSE)
 Anova(clme) # GROUP and EXP* sig
 # summary(clme)
 emmeans(clme, list(pairwise ~ GROUP:EXP), adjust = "tukey") 
-# significant:
-# KIDS,V1 - YA,V1
-# KIDS,V1 - YA,V4 
-# YA,V1 - KIDS,V4 
-# KIDS,V4 - YA,V4
 
-# exp 2
+# exp 2 (manuscript)
 clme = lmer(E ~ GROUP + (1|ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN' & regular.cdf$BLOCK > 6 & regular.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
 Anova(clme) # GROUP 
+emmeans(clme, list(pairwise ~ GROUP), adjust = "tukey")
 
 tmp = apply(errors, c(2, 3, 4), mean, na.rm = TRUE) 
 tmp.se = apply(errors, c(2, 3, 4), std.error)
+
+# errors: test for interaction in pre/post instructions
+
+## EXP 1 (manuscript)
+clme = lmer(E ~ GROUP*COND + (1 + COND|ID), data = subset(regular.cdf, regular.cdf$BLOCK > 6 & regular.cdf$EXP == 'V1'), control = lcctrl, REML = FALSE)
+Anova(clme)
+emmeans(clme, list(pairwise ~ COND | GROUP), adjust = "tukey")
+
+## EXP 2 (manuscript)
+clme = lmer(E ~ GROUP*COND + (1 + COND|ID), data = subset(regular.cdf, regular.cdf$BLOCK > 6 & regular.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
+Anova(clme)
+emmeans(clme, list(pairwise ~ COND | GROUP), adjust = "tukey")
+
 
 ## error plot
 
@@ -191,12 +202,13 @@ t.test(
   regular.cdf$E[regular.cdf$COND == 'INSTR' & regular.cdf$GROUP == 'KIDS' & regular.cdf$EXP == 'V1'], 
   regular.cdf$E[regular.cdf$COND == 'INSTR' & regular.cdf$GROUP == 'YA' & regular.cdf$EXP == 'V1'])
 
-# exp 2 - compare instructed block 9
+# exp 2 - compare instructed block 9 (manuscript)
 t.test(
   regular.cdf$E[regular.cdf$COND == 'INSTR' & regular.cdf$GROUP == 'KIDS' & regular.cdf$EXP == 'V4'], 
   regular.cdf$E[regular.cdf$COND == 'INSTR' & regular.cdf$GROUP == 'YA' & regular.cdf$EXP == 'V4'])
 
-## RTs: to do - put in overleaf
+
+########### REACTION TIME ----
 
 clme = lmer(RT ~ GROUP*EXP + (1|EXP/ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN' & regular.cdf$BLOCK > 6), control = lcctrl, REML = FALSE)
 Anova(clme) # sig: group, cond, exp
@@ -210,29 +222,45 @@ clme = lmer(RT ~ GROUP*COND + (1 + COND|EXP/GROUP/ID), data = subset(regular.cdf
 Anova(clme) # sig: group, cond, group:cond
 emmeans(clme, list(pairwise ~ COND | GROUP), adjust = "tukey")
 
-## exp 1: standard trials
-clme = lmer(RT ~ BLOCK*GROUP + (1+BLOCK|GROUP/ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN' & regular.cdf$EXP == 'V1'), control = lcctrl, REML = FALSE)
+## exp 1: standard trials (manuscript)
+clme = lmer(RT ~ BLOCK*GROUP + (1+BLOCK|GROUP/ID), data = subset(regular.cdf, regular.cdf$EXP == 'V1'), control = lcctrl, REML = FALSE)
 summary(clme)
 summary(rePCA(clme)) # take out GROUP as RE
 
-clme = lmer(RT ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN' & regular.cdf$EXP == 'V1'), control = lcctrl, REML = FALSE)
+clme = lmer(RT ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$EXP == 'V1'), control = lcctrl, REML = FALSE)
 summary(rePCA(clme))
 summary(clme)
 
-
 Anova(clme)
 
-## exp 2: standard trials
-clme = lmer(RT ~ BLOCK*GROUP + (1+BLOCK|GROUP/ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN'& regular.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
+
+## exp 2: standard trials (manuscript)
+clme = lmer(RT ~ BLOCK*GROUP + (1+BLOCK|GROUP/ID), data = subset(regular.cdf, regular.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
 summary(rePCA(clme)) # remove GROUP as RE
 
-clme = lmer(RT ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$COND == 'LEARN'& regular.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
+clme = lmer(RT ~ BLOCK*GROUP + (1+BLOCK|ID), data = subset(regular.cdf, regular.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
 # summary(rePCA(clme)) 
 summary(clme)
 Anova(clme)
 
+## exp 2, blocks 7 and 8
+clme = lmer(RT ~ GROUP +  (1|ID),  data = subset(regular.cdf, (regular.cdf$COND == 'LEARN' & regular.cdf$EXP == 'V4' ) & regular.cdf$BLOCK > 6), control = lcctrl, REML = FALSE)
+Anova(clme) # sig: group, cond, group:cond
+emmeans(clme, list(pairwise ~ COND | GROUP), adjust = "tukey")
+
 tmp = apply(rts, c(2, 3, 4), mean, na.rm = TRUE)
 tmp.se = apply(rts, c(2, 3, 4), std.error)
+
+# RTs: test for interaction in pre/post instructions (manuscript)
+## EXP 1
+clme = lmer(RT ~ GROUP*COND + (1 + COND|ID), data = subset(regular.cdf, regular.cdf$BLOCK > 6 & regular.cdf$EXP == 'V1'), control = lcctrl, REML = FALSE)
+Anova(clme)
+emmeans(clme, list(pairwise ~ COND | GROUP), adjust = "tukey")
+## EXP 2
+clme = lmer(RT ~ GROUP*COND + (1 + COND|ID), data = subset(regular.cdf, regular.cdf$BLOCK > 6 & regular.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
+Anova(clme)
+emmeans(clme, list(pairwise ~ COND | GROUP), adjust = "tukey")
+
 
 pdf('plots/RTs_main.pdf', width = 4, height = 4)
 # tiff("RTs_main.tiff", units="in", width=4.5, height=4.5, res=300)
@@ -542,7 +570,6 @@ stroop_rt_score2 = (stroop_rts2[,'neutral'] - stroop_rts2[,'cong'])
 stroop_rt_score_interfere2 = (stroop_rts2[,'neutral'] - stroop_rts2[,'incong'])
 stroop_effect2 = (stroop_rts2[,'cong'] - stroop_rts2[,'incong']) #stroop effect
 
-
 # now combine data from non-eprime and eprime versions 
 stroop_rt_score_interfere = c(stroop_rt_score_interfere1, stroop_rt_score_interfere2)
 stroop_rt_score = c(stroop_rt_score1,stroop_rt_score2)
@@ -567,6 +594,74 @@ mtext(2, text = 'Neutral RT - Cong. RT (ms)', line = 2.5, cex = 1.3)
 axis(2, at = seq(-100, 150, 50), labels = seq(-100, 150, 50), cex = 1.1)
 abline(h = 0)
 dev.off()
+
+####### MAAATE -------
+scores.cdf = data.frame(
+  ID = names(allerrs), 
+  WM = NA, 
+  STROOP = NA, 
+  E = allerrs, 
+  RT = allrts, 
+  PRELATE = allprelate, 
+  PRENO = allpreno, 
+  CONG = allcongcosts, 
+  AMBIG = allambigcosts, 
+  FOLL = allfoll, 
+  FOLLbin = allfoll > (qbinom(0.95, 64, prob = 0.5)/64)*100, 
+  RECOG = NA, 
+  USED = NA, 
+  GROUP = group)
+
+WMmap = sapply(1:length(scores.cdf$ID), function(x) which(scores.cdf$ID[x] == names(wmscore)))
+WMmap[unlist(lapply(WMmap, function(x) length(x)==0))] = NA
+WMmap = unlist(WMmap)
+scores.cdf$WM = wmscore[WMmap]
+
+Smap = sapply(1:length(scores.cdf$ID), function(x) which(scores.cdf$ID[x] == names(stroop_rt_score)))
+Smap[unlist(lapply(Smap, function(x) length(x)==0))] = NA
+Smap = unlist(Smap)
+scores.cdf$STROOP = stroop_rt_score[Smap]
+scores.cdf$STROOP_INTER = stroop_rt_score_interfere[Smap]
+
+Rmap = sapply(1:length(scores.cdf$ID), function(x) which(scores.cdf$ID[x] == names(recog)))
+Rmap[unlist(lapply(Rmap, function(x) length(x)==0))] = NA
+Rmap = unlist(Rmap)
+scores.cdf$RECOG = recog[Rmap]
+
+Umap = sapply(1:length(scores.cdf$ID), function(x) which(scores.cdf$ID[x] == names(used)))
+Umap[unlist(lapply(Umap, function(x) length(x)==0))] = NA
+Umap = unlist(Umap)
+scores.cdf$USED = used[Umap]
+
+CORRECTmap = sapply(1:length(scores.cdf$ID), function(x) which(scores.cdf$ID[x] == Qdata$id))
+CORRECTmap[unlist(lapply(CORRECTmap, function(x) length(x)==0))] = NA
+CORRECTmap = unlist(CORRECTmap)
+scores.cdf$CORRECT = Qdata$correctreport[CORRECTmap]
+
+
+scores.cdf$GROUPbin = NA
+scores.cdf$GROUPbin[scores.cdf$GROUP == 'CHN Exp.1' | scores.cdf$GROUP == 'CHN Exp.2'] = 'KIDS'
+scores.cdf$GROUPbin[scores.cdf$GROUP == 'ADLT Exp.1' | scores.cdf$GROUP == 'ADLT Exp.2'] = 'YA'
+scores.cdf$GROUPbin = as.factor(scores.cdf$GROUPbin)
+
+for (cvar in names(scores.cdf)[2:13]) {
+  cvarz = paste(cvar, 'z', sep = '')
+  scores.cdf[cvarz] = -as.vector(scale(scores.cdf[cvar]))
+}
+
+# recode vars where lower is 'better' (sign flip to all already above)
+scores.cdf$FOLLz = -scores.cdf$FOLLz
+scores.cdf$FOLLbinz = -scores.cdf$FOLLbinz
+scores.cdf$WMz = -scores.cdf$WMz
+scores.cdf$RECOGz = -scores.cdf$RECOGz
+scores.cdf$USEDz = -scores.cdf$USEDz
+
+scores.cdf$EXP = NA
+
+scores.cdf$EXP[scores.cdf$ID %in% adultids_v1] = 'V1'
+scores.cdf$EXP[scores.cdf$ID %in% kidids_v1] = 'V1'
+scores.cdf$EXP[scores.cdf$ID %in% adultids_v4] = 'V4'
+scores.cdf$EXP[scores.cdf$ID %in% kidids_v4] = 'V4'
 
 
 ################################################################################################################################
@@ -1119,42 +1214,55 @@ stepAIC(glm(switched ~ agegroup + stroop_rt_score_interfere, data=all.mx.no.na),
 ## ------- switching as a continuous variable (colour use on ambiguous trials in blocks 7-8)
 # (manuscript issue)
 ##########################################################################################
-tmp_switch = tapply(DATA_V1$followed, list(DATA_V1$id, DATA_V1$miniblock, DATA_V1$cond, DATA_V1$respkey %in% c(77, 88, 188)), mean, na.rm = TRUE)[,,2, 'TRUE']
+ 
+# switchpoints across experiments
 
+tmp_switch = tapply(DATA$followed, list(DATA$id, DATA$miniblock, DATA$cond, DATA$respkey %in% c(77, 88, 188)), mean, na.rm = TRUE)[,,2, 'TRUE']
 tmp_switch = tmp_switch[,1:16]
-
-miniblock_diff = tmp_switch - matrix(rowMeans(tmp_switch, na.rm = TRUE), ncol = 16, nrow = nids_v1)
+miniblock_diff = tmp_switch - matrix(rowMeans(tmp_switch, na.rm = TRUE), ncol = 16, nrow = nids)
+# NOTE: matrix(rowMeans(tmp_switch, na.rm = TRUE), ncol = 16, nrow = nids) gives mean followed prop for each of the 90 participants across 16 miniblocks
+# tmp_switch minus the above : compares the mean for participant's followed prop in a miniblock to participant's overall performance
 CUsum = apply(miniblock_diff, 1, FUN = function(x) cumsum(x))
 tmp=t(CUsum)
 
-## CLARIFY ABOVE
-# matrix(rowMeans(tmp_switch, na.rm = TRUE), ncol = 16, nrow = nids) gives mean followed prop for each of the 90 participants across 16 miniblocks
+switchpoints = apply(tmp, 1, FUN = function(x) {which.min(x)}) #clarify
+switchpoints[!(ids %in% names(switchids))] = sample(switchpoints[(ids %in% names(switchids))], nids- nswitchers, TRUE) # randomly assign switchpoints to non-switchers
+adult_switch = switchpoints[which(ids %in% names(switchids) & ids %in% adultids)] # the switch points for adults who DID switch
+kid_switch = switchpoints[which(ids %in% names(switchids) & ids %in% kidids)] # the switch points for kids who DID switch
+t.test(kid_switch/2, adult_switch/2) #non-sig
+
+## EXP 1 (manuscript)
+tmp_switch = tapply(DATA_V1$followed, list(DATA_V1$id, DATA_V1$miniblock, DATA_V1$cond, DATA_V1$respkey %in% c(77, 88, 188)), mean, na.rm = TRUE)[,,2, 'TRUE']
+tmp_switch = tmp_switch[,1:16]
+miniblock_diff = tmp_switch - matrix(rowMeans(tmp_switch, na.rm = TRUE), ncol = 16, nrow = nids_v1)
+# NOTE: matrix(rowMeans(tmp_switch, na.rm = TRUE), ncol = 16, nrow = nids) gives mean followed prop for each of the 90 participants across 16 miniblocks
 # tmp_switch minus the above : compares the mean for participant's followed prop in a miniblock to participant's overall performance
-# M_miniblock - M_overall for each miniblock; 90 participants x 16 miniblocks matrix
-# apply (above, 1 ,FUN = function(x) cumsum(x)) ; cumulatively summing the above for each miniblock
-
-switchpoints_v1 = apply(tmp, 1, FUN = function(x) {which.min(x)}) #the switchpoint in miniblocks of each id
-adult_switch_v1 = switchpoints_v1[which(ids_v1 %in% names(switchids_v1) & ids_v1 %in% adultids_v1)] # the switch points for adults who DID switch
-kid_switch_v1 = switchpoints_v1[which(ids_v1 %in% names(switchids_v1) & ids_v1 %in% kidids_v1)] # the switch points for kids who DID switch
-t.test(kid_switch_v1/2, adult_switch_v1/2) 
-
-######
-
-tmp_switch_v4 = tapply(DATA_V4$followed, list(DATA_V4$id, DATA_V4$miniblock, DATA_V4$cond, DATA_V4$respkey %in% c(77, 88, 188)), mean, na.rm = TRUE)[,,2, 'TRUE']
-
-tmp_switch_v4 = tmp_switch_v4[,1:16]
-
-miniblock_diff_v4 = tmp_switch_v4 - matrix(rowMeans(tmp_switch_v4, na.rm = TRUE), ncol = 16, nrow = nids_v4)
-CUsum = apply(miniblock_diff_v4, 1, FUN = function(x) cumsum(x))
+CUsum = apply(miniblock_diff, 1, FUN = function(x) cumsum(x))
 tmp=t(CUsum)
 
-switchpoints_v4 = apply(tmp, 1, FUN = function(x) {which.min(x)}) #the switchpoint in miniblocks of each id
+switchpoints_v1 = apply(tmp, 1, FUN = function(x) {which.min(x)}) #clarify
+switchpoints_v1[!(ids_v1 %in% names(switchids_v1))] = sample(switchpoints_v1[(ids_v1 %in% names(switchids_v1))], nids_v1- nswitchers_v1, TRUE) # randomly assign switchpoints to non-switchers
+
+adult_switch_v1 = switchpoints_v1[which(ids_v1 %in% names(switchids_v1) & ids_v1 %in% adultids_v1)] # the switch points for adults who DID switch
+kid_switch_v1 = switchpoints_v1[which(ids_v1 %in% names(switchids_v1) & ids_v1 %in% kidids_v1)] # the switch points for kids who DID switch
+t.test(kid_switch_v1/2, adult_switch_v1/2) #non-sig
+
+
+## EXP 2 (manuscript)
+tmp_switch = tapply(DATA_V4$followed, list(DATA_V4$id, DATA_V4$miniblock, DATA_V4$cond, DATA_V4$respkey %in% c(77, 88, 188)), mean, na.rm = TRUE)[,,2, 'TRUE']
+tmp_switch = tmp_switch[,1:16]
+miniblock_diff = tmp_switch - matrix(rowMeans(tmp_switch, na.rm = TRUE), ncol = 16, nrow = nids_v4)
+
+CUsum = apply(miniblock_diff, 1, FUN = function(x) cumsum(x))
+tmp=t(CUsum)
+
+switchpoints_v4 = apply(tmp, 1, FUN = function(x) {which.min(x)}) #clarify
+switchpoints_v4[!(ids_v4 %in% names(switchids_v4))] = sample(switchpoints_v4[(ids_v4 %in% names(switchids_v4))], nids_v4- nswitchers_v4, TRUE) # randomly assign switchpoints to non-switchers
+
 adult_switch_v4 = switchpoints_v4[which(ids_v4 %in% names(switchids_v4) & ids_v4 %in% adultids_v4)] # the switch points for adults who DID switch
 kid_switch_v4 = switchpoints_v4[which(ids_v4 %in% names(switchids_v4) & ids_v4 %in% kidids_v4)] # the switch points for kids who DID switch
-t.test(kid_switch_v4/2, adult_switch_v4/2)
-
-tmp_switch = cbind(tmp_switch_v1, tmp_switch_v4)
-
+t.test(kid_switch_v4/2, adult_switch_v4/2) #non-sig
+###
 
 tmp_switch2 = cbind(NA, NA, NA, NA, NA, NA, NA, NA, tmp_switch, NA, NA, NA, NA, NA, NA, NA, NA)
 switchpoints2 = switchpoints + 7
@@ -1204,22 +1312,23 @@ switchpoint.df$SWITCHED[!(switchpoint.df$ID %in% names(switchids))] = 'NOSWITCHE
 
 clme = lmer(COLOR ~ GROUP*SWITCHED*AFTER*EXP + (1 + AFTER|ID), data = switchpoint.df)
 
-Anova(clme) # group, switched, after, group:switched, switched:after, GROUP:SWITCHED:AFTER:EXP significant
+Anova(clme) 
 emmeans(clme, list(pairwise ~ GROUP*EXP*AFTER:SWITCHED), adjust = "tukey")
 emmeans(clme, list(pairwise ~ GROUP), adjust = "tukey")
-# $`emmeans of GROUP`
-# GROUP emmean    SE  df asymp.LCL asymp.UCL
-# KIDS    56.3 0.821 Inf      54.6      57.9
-# YA      61.2 0.958 Inf      59.4      63.1
-# 
-# Results are averaged over the levels of: SWITCHED, AFTER, EXP 
-# Degrees-of-freedom method: asymptotic 
-# Confidence level used: 0.95 
-# 
-# $`pairwise differences of GROUP`
-# contrast  estimate   SE  df z.ratio p.value
-# KIDS - YA    -4.99 1.26 Inf -3.955  0.0001 
 
+# EXP 1 (manuscript: issue - does not match Nico)
+switchpoint.df_v1 <- switchpoint.df_v1 %>% filter(EXP == "V1")
+clme = lmer(COLOR ~ GROUP*SWITCHED*AFTER + (1 + AFTER|ID), data = switchpoint.df_v1)
+Anova(clme)
+emmeans(clme, list(pairwise ~ GROUP*AFTER:SWITCHED), adjust = "tukey")
+
+# EXP 2 (manuscript)
+switchpoint.df_v4 <- switchpoint.df_v4 %>% filter(EXP == "V4")
+clme = lmer(COLOR ~ GROUP*SWITCHED*AFTER + (1 + AFTER|ID), data = switchpoint.df_v4) #AFTER = pre or post switch
+Anova(clme)
+emmeans(clme, list(pairwise ~ GROUP*AFTER:SWITCHED), adjust = "tukey")
+
+######
 tapply(switchpoint.df$COLOR, list(switchpoint.df$SWITCHED, switchpoint.df$AFTER, switchpoint.df$GROUP, switchpoint.df$EXP), mean, na.rm = TRUE)
 
 X = tapply(switchpoint.df$COLOR, list(switchpoint.df$ID, switchpoint.df$SWITCHED, switchpoint.df$AFTER, switchpoint.df$GROUP, switchpoint.df$EXP), mean, na.rm = TRUE)
