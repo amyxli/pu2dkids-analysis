@@ -134,8 +134,8 @@ tmp = tapply(DATA$followed, list(DATA$id, DATA$cond, DATA$block>6 & DATA$block<9
 switchids = which(tmp > cthresh)
 nswitchids = which(tmp <= cthresh)
 nswitchers = length(switchids)
-nkidswitchers = length(which(ids %in% names(switchids) & ids %in% kidids_v4))
-nadultswitchers = length(which(ids %in% names(switchids) & ids %in% adultids_v4))
+nkidswitchers = length(which(ids %in% names(switchids) & ids %in% kidids))
+nadultswitchers = length(which(ids %in% names(switchids) & ids %in% adultids))
 
 
 tmp_switch = tapply(DATA$followed, list(DATA$id, DATA$miniblock, DATA$cond, DATA$respkey %in% c(0:200)), mean, na.rm = TRUE)[,,2, 'TRUE']
@@ -477,9 +477,8 @@ t.test(scores.cdf$CORRECT[scores.cdf$EXP == 'V1' & scores.cdf$GROUP == 'CHN Exp.
        scores.cdf$CORRECT[scores.cdf$EXP == 'V1' & scores.cdf$GROUP == 'ADLT Exp.1'])
 chisq.test(table(scores.cdf$CORRECT[scores.cdf$EXP == 'V1'], scores.cdf$GROUPbin[scores.cdf$EXP == 'V1']))
 
-## ----------- Colour use on ambiguous trials
+## ----------- COLOUR USE ON AMBIGUOUS TRIALS
 
-# AXL.
 # exp 1
 clme = lmer(COLOR ~ BLOCK*GROUP + (1+BLOCK|ID), # fit random intercept and random slope for BLOCK with ID as grouping factor
             data = (ambiguous.cdf %>% filter(EXP == "V1" & COND == "LEARN")), 
@@ -540,7 +539,7 @@ clme_nogroup = lmer(COLOR ~ BLOCK*EXP + (1+BLOCK|ID), data = (ambiguous.cdf %>% 
 anova(clme, clme_nogroup) # including GROUP does not improve model
 
 
-## ----------- Colour use in blocks 7 and 8
+## Colour use in blocks 7 and 8
 plot(y=ambiguous.cdf$COLOR, x=ambiguous.cdf$EXP)
 
 clme = lmer(COLOR ~ BLOCK*GROUP*EXP + (1|EXP), data = subset(ambiguous.cdf, ambiguous.cdf$COND == 'LEARN' & ambiguous.cdf$BLOCK > 6), control = lcctrl, REML = FALSE)
@@ -550,7 +549,7 @@ emmeans(clme, list(pairwise ~ GROUP), adjust = "tukey")
 emmeans(clme, list(pairwise ~ GROUP:EXP), adjust = "tukey")
 
 clme = lmer(COLOR ~ GROUP*EXP + (1|EXP), data = subset(ambiguous.cdf, ambiguous.cdf$COND == 'LEARN' & ambiguous.cdf$BLOCK > 6), control = lcctrl, REML = FALSE)
-summary(clme) # makes no real sense to include EXP here.
+summary(clme) 
 
 
 # experiment 1 (manuscript)
@@ -562,6 +561,7 @@ Anova(clme)
 clme_nogroup = lmer(COLOR ~ BLOCK + (1|ID), data = (ambiguous.cdf %>% filter(EXP == "V1" & BLOCK > 6 & BLOCK < 9 & COND == "LEARN")), control = lcctrl, REML = FALSE)
 anova(clme, clme_nogroup) # group not sig
 
+
 # experiment 2 (manuscript)
 
 clme = lmer(COLOR ~ GROUP*BLOCK + (1|ID), data = (ambiguous.cdf %>% filter(EXP == "V4" & BLOCK > 6 & BLOCK < 9 & COND == "LEARN")), control = lcctrl, REML = FALSE)
@@ -572,16 +572,18 @@ clme_nogroup = lmer(COLOR ~ BLOCK + (1|ID), data = (ambiguous.cdf %>% filter(EXP
 
 anova(clme, clme_nogroup) # group not sig
 
-tmp = apply(followed, c(2, 3, 4), mean, na.rm = TRUE)
-tmp.se = apply(followed, c(2, 3, 4), std.error)
-
 ## Model for colour use blocks 7 - 8 without block
+# EXP 1
 
-clme = lmer(COLOR ~ AGE*EXP + (1|ID), data = subset(ambiguous.cdf, ambiguous.cdf$COND == 'LEARN' & ambiguous.cdf$BLOCK > 6 & ambiguous.cdf$GROUP == 'KIDS'), control = lcctrl, REML = FALSE)
-Anova(clme) #none sig
+clme = lmer(COLOR ~ GROUP + (1|ID), data = subset(ambiguous.cdf, ambiguous.cdf$COND == 'LEARN' & ambiguous.cdf$BLOCK > 6 & ambiguous.cdf$EXP == 'V1'), control = lcctrl, REML = FALSE)
+Anova(clme)
+emmeans(clme, list(pairwise ~ GROUP), adjust = "tukey")
 
-emmeans(clme, list(pairwise ~ AGE), adjust = "tukey")
-emmeans(clme, list(pairwise ~ GROUP:EXP), adjust = "tukey")
+
+# EXP 2
+clme = lmer(COLOR ~ GROUP + (1|ID), data = subset(ambiguous.cdf, ambiguous.cdf$COND == 'LEARN' & ambiguous.cdf$BLOCK > 6 & ambiguous.cdf$EXP == 'V4'), control = lcctrl, REML = FALSE)
+Anova(clme)
+emmeans(clme, list(pairwise ~ GROUP), adjust = "tukey")
 
 tapply(ambiguous.cdf$COLOR, list(ambiguous.cdf$AGE, ambiguous.cdf$COND, ambiguous.cdf$BLOCK > 6), mean)[,'LEARN', 'TRUE']
 
@@ -647,6 +649,8 @@ chisq.test(table(scores.cdf$CORRECT[scores.cdf$EXP == 'V4'], scores.cdf$GROUPbin
 
 ### SWITCH POINT ALIGNED DATA 
 
+## EXP 1
+
 X = tapply(switchpoint.cdf$COLOR, list(switchpoint.cdf$ID, switchpoint.cdf$SWITCHED, switchpoint.cdf$BLOCK, switchpoint.cdf$GROUP, switchpoint.cdf$EXP), mean, na.rm = TRUE)[,,,,'V1']
 
 ps_ya = sapply(1:5, function(x) t.test(X[,'SWITCHER',x,'YA'],X[,'SWITCHER',x+1,'YA'], paired = TRUE)$p.value)
@@ -656,10 +660,9 @@ ps_kids = sapply(1:5, function(x) t.test(X[,'SWITCHER',x,'KIDS'],X[,'SWITCHER',x
 p.adjust(ps_ya, method = 'holm')
 p.adjust(ps_kids, method = 'holm')
 
-## EXP 1
 cdf = subset(switchpoint.cdf, switchpoint.cdf$SWITCHED == 'SWITCHER' & switchpoint.cdf$EXP == 'V1' & !is.na(switchpoint.cdf$COLOR))
 
-clme = lmer(COLOR ~ GROUP*AFTER + (1+AFTER|ID), data = cdf, control = lcctrl, REML = FALSE)
+clme = lmer(COLOR ~ GROUP*AFTER + (1+AFTER|ID), data = cdf, control = lcctrl, REML = FALSE) #(manuscript)
 Anova(clme)
 emmeans(clme, list(pairwise ~ AFTER:GROUP), adjust = "tukey")
 
@@ -693,12 +696,12 @@ ps_ya = sapply(1:5, function(x) t.test(X[,'SWITCHER',x,'YA'],X[,'SWITCHER',x+1,'
 
 ps_kids = sapply(1:5, function(x) t.test(X[,'SWITCHER',x,'KIDS'],X[,'SWITCHER',x+1,'KIDS'], paired = TRUE)$p.value)
 
-p.adjust(ps_ya, method = 'holm')
-p.adjust(ps_kids, method = 'holm')
+p.adjust(ps_ya, method = 'holm') # manuscript
+p.adjust(ps_kids, method = 'holm') # manuscript
 
 cdf = subset(switchpoint.cdf, switchpoint.cdf$SWITCHED == 'SWITCHER' & switchpoint.cdf$EXP == 'V4' & !is.na(switchpoint.cdf$COLOR))
 
-clme = lmer(COLOR ~ GROUP*AFTER + (1+AFTER|ID), data = cdf, control = lcctrl, REML = FALSE)
+clme = lmer(COLOR ~ GROUP*AFTER + (1+AFTER|ID), data = cdf, control = lcctrl, REML = FALSE) # (manuscript)
 Anova(clme)
 emmeans(clme, list(pairwise ~ AFTER:GROUP), adjust = "tukey")
 
@@ -738,11 +741,11 @@ t.test(wmscore[adultids], wmscore[kidids])
 
 ## STROOP 
 
-# STROOP 
-
 # exp 1 
 t.test(scores.cdf$STROOP[scores.cdf$EXP == 'V1' & scores.cdf$GROUP == 'CHN Exp.1'])
+
 t.test(scores.cdf$STROOP[scores.cdf$EXP == 'V1' & scores.cdf$GROUP == 'ADLT Exp.1'])
+
 t.test(scores.cdf$STROOP[scores.cdf$EXP == 'V1' & scores.cdf$GROUP == 'CHN Exp.1'], 
        scores.cdf$STROOP[scores.cdf$EXP == 'V1' & scores.cdf$GROUP == 'ADLT Exp.1'])
 
@@ -755,11 +758,12 @@ t.test(scores.cdf$WM[scores.cdf$EXP == 'V1' & scores.cdf$GROUP == 'CHN Exp.1'],
 # exp 2
 t.test(scores.cdf$STROOP[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'CHN Exp.2'])
 t.test(scores.cdf$STROOP[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'ADLT Exp.2'])
+
 t.test(scores.cdf$STROOP[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'CHN Exp.2'], 
-       scores.cdf$STROOP[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'ADLT Exp.2'])
+       scores.cdf$STROOP[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'ADLT Exp.2']) # children experienced larger facilitation effect of congruent stimuli than adults
 
 t.test(scores.cdf$STROOP_INTER[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'CHN Exp.2'], 
-       scores.cdf$STROOP_INTER[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'ADLT Exp.2'])
+       scores.cdf$STROOP_INTER[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'ADLT Exp.2'])  # adults did not experience significantly larger semantic interference (incongruent - neutral) than children
 
 t.test(scores.cdf$WM[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'CHN Exp.2'], 
        scores.cdf$WM[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'ADLT Exp.2'])
