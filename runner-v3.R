@@ -776,14 +776,18 @@ t.test(scores.cdf$WM[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'CHN Exp.2'],
 ################################################################################################################################
 #                                       variables in strategy switching                                                       ##
 ################################################################################################################################
+# omit na's for procedure
+scores.cdf.no.na <- na.omit(scores.cdf) 
 
 ## ------- switching to color use as a binary variable (whether or not colour used by blocks 7-8)
 glm1 <- glm(SWITCHED ~ GROUPbin + EXP + E + AMBIG + CONG + PRENO + PRELATE + WM + STROOP + STROOP_INTER, 
-            data=scores.cdf)
+            data=scores.cdf.no.na,
+            family = binomial)
 summary(glm1)
 
 glm2 <- glm(SWITCHED ~ GROUPbin + EXP + E + AMBIG + CONG + PRENO + PRELATE + WM + STROOP, 
-            data=scores.cdf) # model without stroop_score_interfere
+            data=scores.cdf.no.na,
+            family = binomial) # model without stroop_score_interfere
 summary(glm2)
 
 # model comparison
@@ -793,23 +797,25 @@ scores.cdf$GROUPbin <- as.factor(scores.cdf$GROUPbin)
 
 ## stepwise AIC 
 
-# omit na's for procedure
-scores.cdf.no.na <- na.omit(scores.cdf) 
-
 # model with all variables including experiment
-tmpmod = glm(SWITCHED ~ GROUPbin + EXP + E + AMBIG + CONG + PRENO + PRELATE + WM + STROOP + STROOP_INTER, 
-             data=scores.cdf.no.na)
+tmpmod = glm(SWITCHED ~ GROUPbin + EXP + E + PRENO + PRELATE + WM + STROOP + STROOP_INTER, 
+             data=scores.cdf.no.na,
+             family = binomial) # AMBIG and CONG can also be included
 
 # backwards
 stepAIC(tmpmod, scope=tmpmod, direction="backward") 
 
 tmpmod2 = glm(SWITCHED ~ 1, 
-              data=scores.cdf.no.na)
+              data=scores.cdf.no.na,
+              family = binomial)
 # forwards
 stepAIC(tmpmod2, scope=list(lower=tmpmod2, upper=tmpmod), direction="forward") 
 
 # both
-stepAIC(glm(SWITCHED ~ GROUPbin + STROOP_INTER, data=scores.cdf.no.na), scope=tmpmod, direction="both")
+stepAIC(glm(SWITCHED ~ GROUPbin + STROOP_INTER, data=scores.cdf.no.na,
+            family = binomial), scope=tmpmod, direction="both")
+
+## all three procedures converge!
 
 ## ------ color use in blocks 7 and 8, and predictors, using LM
 
@@ -824,17 +830,27 @@ scores.cdf.no.na <- na.omit(scores.cdf)
 
 
 # full model
-tmpmod <- lm(COLOR ~ GROUPbin + EXP + E + AMBIG + CONG + PRENO + PRELATE + WM + STROOP + STROOP_INTER, 
-  data=scores.cdf.no.na)
+tmpmod <- lm(COLOR ~ GROUPbin + EXP + E + PRENO + PRELATE + WM + STROOP + STROOP_INTER, 
+  data=scores.cdf.no.na) #AMBIG can also be included
+
+summary(tmpmod)
 
 # backwards
 stepAIC(tmpmod, scope=tmpmod, direction="backward") 
 
 tmpmod2 = lm(COLOR ~ 1, 
-              data=scores.cdf.no.na)
+              data=scores.cdf.no.na) #intercept only model
 # forwards
 stepAIC(tmpmod2, scope=list(lower=tmpmod2, upper=tmpmod), direction="forward") 
 
 # both
-stepAIC(lm(COLOR ~ GROUPbin + STROOP_INTER, data=scores.cdf.no.na), scope=tmpmod, direction="both")
+stepAIC(lm(COLOR ~ GROUPbin + STROOP_INTER, data=scores.cdf.no.na),  scope=list(lower=tmpmod2, upper=tmpmod), direction="both")
+
+## all three procedures converge!
+
+# checking assumptions -- we could also log transform the dv but not sure if this will be necessary...
+plot(lm(formula = log(COLOR) ~ STROOP_INTER + E + WM, data = scores.cdf.no.na))
+par(mfrow=c(1,1))
+
+
 
