@@ -1,4 +1,4 @@
-# LAST EDITED 23/6/20, AXL
+# LAST EDITED 30/6/20, AXL
 # No plots, changed to be based on NS's code
 
 ## parts referenced in manuscript have been commented "(manuscript)"
@@ -594,24 +594,29 @@ tapply(ambiguous.cdf$COLOR, list(ambiguous.cdf$AGE, ambiguous.cdf$COND, ambiguou
 
 ## proportion of subjects who switched
 # EXP 1
-tmp = tapply(ambiguous.cdf$COLOR, list(regular.cdf$ID, regular.cdf$BLOCK, regular.cdf$GROUP, regular.cdf$EXP), mean)[,,,'V1']
+tmp = tapply(ambiguous.cdf$COLOR, list(ambiguous.cdf$ID, ambiguous.cdf$BLOCK, ambiguous.cdf$GROUP, ambiguous.cdf$EXP), mean)[,,,'V1']
 tmp = apply(tmp[,7:8,], c(1, 3), mean, na.rm = TRUE) > (qbinom(0.95, 64, prob = 0.5)/64)*100
 ctab = apply(tmp, 2, table)
 chisq.test(ctab, simulate.p.value = TRUE)
 
-tmp = tapply(ambiguous.cdf$COLOR, list(regular.cdf$ID, regular.cdf$BLOCK, regular.cdf$GROUP, regular.cdf$EXP), mean)[,,,'V1']
+tmp = tapply(ambiguous.cdf$COLOR, list(ambiguous.cdf$ID, ambiguous.cdf$BLOCK, ambiguous.cdf$GROUP, ambiguous.cdf$EXP), mean)[,,,'V1']
 tmp = apply(tmp[,7:8,], c(1, 3), mean, na.rm = TRUE) > 75
 ctab = apply(tmp, 2, table)
 chisq.test(ctab, simulate.p.value = TRUE)
 
 # EXP 2
-tmp = tapply(ambiguous.cdf$COLOR, list(regular.cdf$ID, regular.cdf$BLOCK, regular.cdf$GROUP, regular.cdf$EXP), mean)[,,,'V4']
+tmp = tapply(ambiguous.cdf$COLOR, list(ambiguous.cdf$ID, ambiguous.cdf$BLOCK, ambiguous.cdf$GROUP, ambiguous.cdf$EXP), mean)[,,,'V4']
 tmp = apply(tmp[,7:8,], c(1, 3), mean, na.rm = TRUE) > (qbinom(0.95, 64, prob = 0.5)/64)*100
 ctab = apply(tmp, 2, table)
 chisq.test(ctab, simulate.p.value = TRUE)
 
-tmp = tapply(ambiguous.cdf$COLOR, list(regular.cdf$ID, regular.cdf$BLOCK, regular.cdf$GROUP, regular.cdf$EXP), mean)[,,,'V4']
+tmp = tapply(ambiguous.cdf$COLOR, list(ambiguous.cdf$ID, ambiguous.cdf$BLOCK, ambiguous.cdf$GROUP, ambiguous.cdf$EXP), mean)[,,,'V4']
 tmp = apply(tmp[,7:8,], c(1, 3), mean, na.rm = TRUE) > 75
+ctab = apply(tmp, 2, table)
+chisq.test(ctab, simulate.p.value = TRUE)
+
+tmp = tapply(ambiguous.cdf$COLOR, list(ambiguous.cdf$ID, ambiguous.cdf$BLOCK, ambiguous.cdf$GROUP, ambiguous.cdf$EXP), mean)[,,,'V4']
+tmp = apply(tmp[,7:8,], c(1, 3), mean, na.rm = TRUE) > 50
 ctab = apply(tmp, 2, table)
 chisq.test(ctab, simulate.p.value = TRUE)
 
@@ -769,36 +774,67 @@ t.test(scores.cdf$WM[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'CHN Exp.2'],
        scores.cdf$WM[scores.cdf$EXP == 'V4' & scores.cdf$GROUP == 'ADLT Exp.2'])
 
 ################################################################################################################################
-#                                       variables in strategy switching     - to update                                       ##
+#                                       variables in strategy switching                                                       ##
 ################################################################################################################################
 
-## ------- switching as a binary variable (whether or not colour used by blocks 7-8)
-glm1 <- glm(switched ~ agegroup + taskV + `mean(E)` + allambigcosts + allcongcosts + allpreno + allprelate + wmscore + stroop_rt_score + stroop_rt_score_interfere, 
-            data=all.mx)
+## ------- switching to color use as a binary variable (whether or not colour used by blocks 7-8)
+glm1 <- glm(SWITCHED ~ GROUPbin + EXP + E + AMBIG + CONG + PRENO + PRELATE + WM + STROOP + STROOP_INTER, 
+            data=scores.cdf)
 summary(glm1)
 
-glm2 <- glm(switched ~ agegroup + taskV +  `mean(E)` + allambigcosts + allcongcosts + allpreno + allprelate + wmscore + stroop_rt_score, 
-            data=all.mx) # model without stroop_score_interfere
+glm2 <- glm(SWITCHED ~ GROUPbin + EXP + E + AMBIG + CONG + PRENO + PRELATE + WM + STROOP, 
+            data=scores.cdf) # model without stroop_score_interfere
 summary(glm2)
 
 # model comparison
 anova(glm1, glm2, test="Chisq") # stroop_score_interfere is sig
 
-all.mx$agegroup <- as.factor(all.mx$agegroup)
+scores.cdf$GROUPbin <- as.factor(scores.cdf$GROUPbin)
 
 ## stepwise AIC 
 
 # omit na's for procedure
-all.mx.no.na <- na.omit(all.mx) 
+scores.cdf.no.na <- na.omit(scores.cdf) 
 
 # model with all variables including experiment
-tmpmod = glm(switched ~ agegroup + taskV + allambigcosts + allcongcosts + wmscore + stroop_rt_score + stroop_rt_score_interfere, data=all.mx.no.na)
+tmpmod = glm(SWITCHED ~ GROUPbin + EXP + E + AMBIG + CONG + PRENO + PRELATE + WM + STROOP + STROOP_INTER, 
+             data=scores.cdf.no.na)
+
 # backwards
 stepAIC(tmpmod, scope=tmpmod, direction="backward") 
-# forwards
-stepAIC(glm(switched ~ 1, data=all.mx.no.na), scope=tmpmod, direction="forward") 
-# both
-stepAIC(glm(switched ~ agegroup + stroop_rt_score_interfere, data=all.mx.no.na), scope=tmpmod, direction="both")
 
-# both directions and backwards give same results
+tmpmod2 = glm(SWITCHED ~ 1, 
+              data=scores.cdf.no.na)
+# forwards
+stepAIC(tmpmod2, scope=list(lower=tmpmod2, upper=tmpmod), direction="forward") 
+
+# both
+stepAIC(glm(SWITCHED ~ GROUPbin + STROOP_INTER, data=scores.cdf.no.na), scope=tmpmod, direction="both")
+
+## ------ color use in blocks 7 and 8, and predictors, using LM
+
+# create df for prop color use on ambig trials in last 2 correlated blocks (7&8)
+
+tmp <- subset(ambiguous.cdf, ambiguous.cdf$COND == 'LEARN' & ambiguous.cdf$BLOCK > 6) %>% 
+  group_by(ID) %>% 
+  summarise(COLOR = mean(COLOR)) # average blocks 7 & 8 color use proportions for each subject
+
+scores.cdf <- right_join(scores.cdf,tmp)
+scores.cdf.no.na <- na.omit(scores.cdf) 
+
+
+# full model
+tmpmod <- lm(COLOR ~ GROUPbin + EXP + E + AMBIG + CONG + PRENO + PRELATE + WM + STROOP + STROOP_INTER, 
+  data=scores.cdf.no.na)
+
+# backwards
+stepAIC(tmpmod, scope=tmpmod, direction="backward") 
+
+tmpmod2 = lm(COLOR ~ 1, 
+              data=scores.cdf.no.na)
+# forwards
+stepAIC(tmpmod2, scope=list(lower=tmpmod2, upper=tmpmod), direction="forward") 
+
+# both
+stepAIC(lm(COLOR ~ GROUPbin + STROOP_INTER, data=scores.cdf.no.na), scope=tmpmod, direction="both")
 
